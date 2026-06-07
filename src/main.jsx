@@ -11,6 +11,7 @@ createRoot(document.getElementById('root')).render(
     {/* daftarkan routing */}
     <AuthProvider>
       <BookingProvider>
+        {/*  children */}
         <RouterProvider router={router} />
       </BookingProvider>
     </AuthProvider>

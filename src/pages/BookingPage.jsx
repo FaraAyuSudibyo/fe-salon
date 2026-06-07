@@ -1,20 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// Label
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Form label" — label teks di atas input form booking
-//
-// TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Default input" — input nama, tanggal, catatan booking
-//
-// Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol konfirmasi booking
-// ============================================================
 import { Label, TextInput, Button } from "flowbite-react"
 import { useAuth } from "../context/AuthContext"
 import { useBooking } from "../context/BookingContext"
@@ -24,38 +9,45 @@ function fmt(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', cur
 
 export default function BookingPage() {
     const { user } = useAuth()
-    const { services, addBooking, HOME_SERVICE_FEE } = useBooking()
+    const { services, fetchServices, addBooking, HOME_SERVICE_FEE } = useBooking()
     const navigate = useNavigate()
 
-    const [cat,      setCat]      = useState("All")
-    const [search,   setSearch]   = useState("")
+    useEffect(() => { fetchServices() }, [])
+
+    const [cat, setCat] = useState("All")
+    const [search, setSearch] = useState("")
     const [selected, setSelected] = useState(null)
     const [form, setForm] = useState({ date: '', time: '', serviceType: 'onsite', address: '', paymentMethod: 'transfer', notes: '' })
     const [success, setSuccess] = useState(false)
-    const [error,   setError]   = useState("")
+    const [error, setError] = useState("")
+    const [loading, setLoading] = useState(false)
 
     const categories = ["All", ...Array.from(new Set(services.map(s => s.category)))]
-    const filtered   = services.filter(s => (cat === "All" || s.category === cat) && s.name.toLowerCase().includes(search.toLowerCase()))
-    const isHome     = form.serviceType === "homeservice"
-    const total      = selected ? selected.price + (isHome ? HOME_SERVICE_FEE : 0) : 0
-    const set        = (f, v) => setForm(p => ({ ...p, [f]: v }))
-    const times      = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00']
+    const filtered = services.filter(s => (cat === "All" || s.category === cat) && s.name.toLowerCase().includes(search.toLowerCase()))
+    const isHome = form.serviceType === "homeservice"
+    const total = selected ? selected.price + (isHome ? HOME_SERVICE_FEE : 0) : 0
+    const set = (f, v) => setForm(p => ({ ...p, [f]: v }))
+    const times = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
 
-    function handleSubmit() {
-        if (!selected)                            { setError("Pilih layanan terlebih dahulu"); return }
-        if (!form.date)                           { setError("Pilih tanggal"); return }
-        if (!form.time)                           { setError("Pilih jam"); return }
-        if (isHome && !form.address.trim())       { setError("Alamat wajib diisi untuk Home Service"); return }
-        setError("")
-        addBooking({
-            customerId: user.id, customerName: user.name, customerPhone: user.phone,
-            serviceId: selected.id, serviceName: selected.name, servicePrice: selected.price,
-            serviceType: form.serviceType, address: form.address,
-            date: form.date, time: form.time,
-            paymentMethod: form.paymentMethod, notes: form.notes,
+    async function handleSubmit() {
+        if (!selected) { setError("Pilih layanan terlebih dahulu"); return }
+        if (!form.date) { setError("Pilih tanggal"); return }
+        if (!form.time) { setError("Pilih jam"); return }
+        if (isHome && !form.address.trim()) { setError("Alamat wajib diisi untuk Home Service"); return }
+        setError(""); setLoading(true)
+
+        const res = await addBooking({
+            serviceId:     selected.id,
+            serviceType:   form.serviceType,
+            address:       form.address,
+            date:          form.date,
+            time:          form.time,
+            paymentMethod: form.paymentMethod,
+            notes:         form.notes,
         })
-        setSuccess(true)
-        setTimeout(() => navigate("/my-bookings"), 2000)
+        setLoading(false)
+        if (res.status === 201) { setSuccess(true); setTimeout(() => navigate("/my-bookings"), 2000) }
+        else setError(res.data || 'Gagal membuat booking')
     }
 
     if (success) {
@@ -64,9 +56,7 @@ export default function BookingPage() {
                 <div className="bg-white border rounded-lg p-10" style={{ borderColor: 'var(--border)' }}>
                     <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 text-2xl" style={{ backgroundColor: '#e8f0e8', color: '#4a7c59' }}>✓</div>
                     <h2 className="text-2xl font-normal mb-2" style={{ color: 'var(--brown)' }}>Booking Berhasil!</h2>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                        Notifikasi WhatsApp dikirim ke {user?.phone}
-                    </p>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Mengarahkan ke halaman reservasi...</p>
                 </div>
             </div>
         )
@@ -81,8 +71,6 @@ export default function BookingPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* Kiri: pilih layanan */}
                 <div className="lg:col-span-2">
                     <h2 className="text-lg font-medium mb-4" style={{ color: 'var(--brown)' }}>1. Pilih Layanan</h2>
                     <FilterComp categories={categories} activeCategory={cat} onCategory={setCat} search={search} onSearch={e => setSearch(e.target.value)} />
@@ -102,7 +90,6 @@ export default function BookingPage() {
                     </div>
                 </div>
 
-                {/* Kanan: form detail */}
                 <div className="bg-white border rounded-lg p-6 h-fit sticky top-20" style={{ borderColor: 'var(--border)' }}>
                     <h2 className="text-lg font-medium mb-4" style={{ color: 'var(--brown)' }}>2. Detail Booking</h2>
 
@@ -120,7 +107,6 @@ export default function BookingPage() {
                     {error && <div className="p-3 rounded mb-4 text-xs" style={{ backgroundColor: '#f5e8e8', color: '#9b4f4f' }}>{error}</div>}
 
                     <div className="flex flex-col gap-4">
-                        {/* Jenis layanan */}
                         <div>
                             <Label value="Jenis Layanan" className="mb-2 block" />
                             <div className="grid grid-cols-2 gap-2">
@@ -154,8 +140,7 @@ export default function BookingPage() {
 
                         <div>
                             <Label value="Jam" className="mb-2 block" />
-                            <select value={form.time} onChange={e => set('time', e.target.value)}
-                                className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }}>
+                            <select value={form.time} onChange={e => set('time', e.target.value)} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }}>
                                 <option value="">Pilih jam...</option>
                                 {times.map(t => <option key={t} value={t}>{t} WIB</option>)}
                             </select>
@@ -163,8 +148,7 @@ export default function BookingPage() {
 
                         <div>
                             <Label value="Metode Pembayaran" className="mb-2 block" />
-                            <select value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value)}
-                                className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }}>
+                            <select value={form.paymentMethod} onChange={e => set('paymentMethod', e.target.value)} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }}>
                                 <option value="cash">Tunai</option>
                                 <option value="transfer">Transfer Bank</option>
                                 <option value="qris">QRIS</option>
@@ -173,9 +157,7 @@ export default function BookingPage() {
 
                         <div>
                             <Label value="Catatan (opsional)" className="mb-2 block" />
-                            <textarea value={form.notes} onChange={e => set('notes', e.target.value)}
-                                placeholder="Catatan khusus..." rows={2}
-                                className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }} />
+                            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Catatan khusus..." rows={2} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: 'var(--border)' }} />
                         </div>
 
                         {selected && (
@@ -197,8 +179,8 @@ export default function BookingPage() {
                             </div>
                         )}
 
-                        <Button onClick={handleSubmit} className="w-full" style={{ backgroundColor: 'var(--rose)', border: 'none' }}>
-                            Konfirmasi Booking
+                        <Button onClick={handleSubmit} disabled={loading} className="w-full" style={{ backgroundColor: 'var(--rose)', border: 'none' }}>
+                            {loading ? 'Memproses...' : 'Konfirmasi Booking'}
                         </Button>
                     </div>
                 </div>

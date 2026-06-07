@@ -1,18 +1,25 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "./context/AuthContext"
-import { useBooking } from "./context/BookingContext"
 import FilterComp from "./components/FilterComp"
 import CardList from "./components/CardList"
 
 export default function App() {
     const { isLoggedIn, isAdmin } = useAuth()
-    const { services } = useBooking()
-    const [cat,    setCat]    = useState("All")
+    const [services, setServices] = useState([])
+    const [cat, setCat] = useState("All")
     const [search, setSearch] = useState("")
 
+    // fetch services langsung dari BE tanpa token — halaman publik
+    useEffect(() => {
+        fetch('http://localhost:3000/services')
+            .then(res => res.json())
+            .then(json => { if (json.status === 200) setServices(json.data) })
+            .catch(() => { })
+    }, [])
+
     const categories = ["All", ...Array.from(new Set(services.map(s => s.category)))]
-    const filtered   = services.filter(s =>
+    const filtered = services.filter(s =>
         (cat === "All" || s.category === cat) &&
         s.name.toLowerCase().includes(search.toLowerCase())
     )
@@ -23,7 +30,7 @@ export default function App() {
             <section className="relative min-h-screen flex items-center justify-center text-center px-6" style={{ background: 'linear-gradient(135deg, var(--cream) 0%, var(--cream-dark) 100%)' }}>
                 <div className="relative z-10 fade-in">
                     <p className="text-xs uppercase tracking-widest mb-4" style={{ color: 'var(--rose)' }}>
-                        Salon Kecantikan 
+                        Salon Kecantikan
                     </p>
                     <h1 className="text-5xl md:text-6xl font-normal mb-5 leading-tight" style={{ color: 'var(--dark)' }}>
                         Tampil lebih percaya diri <br /> mulai dari sini
@@ -64,7 +71,7 @@ export default function App() {
                     <h2 className="text-4xl font-normal" style={{ color: 'var(--brown)' }}>
                         Dirancang untuk membuat Anda merasa istimewa.
                     </h2>
-                    <Link to="/booking" className="text-sm mt-2 inline-block" style={{ color: 'var(--rose)' }}>
+                    <Link to={isLoggedIn ? "/booking" : "/login"} className="text-sm mt-2 inline-block" style={{ color: 'var(--rose)' }}>
                         Lihat semua →
                     </Link>
                 </div>
@@ -86,9 +93,9 @@ export default function App() {
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
-                            { name: 'Rania A.',  text: 'Pelayanannya ramah, hasil creambath-nya bikin rambut super halus!' },
-                            { name: 'Dewi P.',   text: 'Cat rambutnya rapi, warnanya sesuai ekspektasi. Pasti balik lagi.' },
-                            { name: 'Lisa M.',   text: 'Suasananya nyaman, booking online-nya gampang banget.' },
+                            { name: 'Rania A.', text: 'Pelayanannya ramah, hasil creambath-nya bikin rambut super halus!' },
+                            { name: 'Dewi P.', text: 'Cat rambutnya rapi, warnanya sesuai ekspektasi. Pasti balik lagi.' },
+                            { name: 'Lisa M.', text: 'Suasananya nyaman, booking online-nya gampang banget.' },
                         ].map(t => (
                             <div key={t.name} className="bg-white p-7 rounded-lg border" style={{ borderColor: 'var(--border)' }}>
                                 <p className="text-sm italic mb-4 leading-relaxed" style={{ color: 'var(--text-muted)' }}>

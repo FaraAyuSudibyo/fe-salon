@@ -1,11 +1,4 @@
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Badge
-//    Docs  : https://flowbite-react.com/docs/components/badge
-//    Contoh: "Default badge" — label status reservasi
-//            (misal: Pending, Confirmed, Done) dengan warna berbeda
-// ============================================================
+import { useEffect } from "react"
 import { Badge } from "flowbite-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
@@ -43,8 +36,14 @@ function statusColor(s) {
 
 export default function Dashboard() {
     const { user, isAdmin, logout } = useAuth()
-    const { bookings, services, totalRevenue, pendingPayments, homeServiceCount, bookingsByCustomer } = useBooking()
+    const { bookings, services, totalRevenue, pendingPayments, homeServiceCount, fetchMyBookings, fetchAllBookings, bookingsByCustomer } = useBooking()
     const navigate = useNavigate()
+
+    useEffect(() => {
+        if (isAdmin) fetchAllBookings()
+        else fetchMyBookings()
+    }, [isAdmin])
+
     const mine = isAdmin ? bookings : bookingsByCustomer(user?.id)
     const totalSpend = mine.filter(b => b.status === 'completed' && b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalPrice || b.servicePrice), 0)
 
@@ -72,20 +71,20 @@ export default function Dashboard() {
                     )}
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-                        <StatCard label="Total Booking"  value={bookings.length} />
-                        <StatCard label="Pending"        value={bookings.filter(b => b.status === 'pending').length} />
-                        <StatCard label="Selesai"        value={bookings.filter(b => b.status === 'completed').length} />
-                        <StatCard label="Home Service"   value={homeServiceCount} />
-                        <StatCard label="Pendapatan"     value={fmt(totalRevenue)} />
+                        <StatCard label="Total Booking" value={bookings.length} />
+                        <StatCard label="Pending" value={bookings.filter(b => b.status === 'pending').length} />
+                        <StatCard label="Selesai" value={bookings.filter(b => b.status === 'completed').length} />
+                        <StatCard label="Home Service" value={homeServiceCount} />
+                        <StatCard label="Pendapatan" value={fmt(totalRevenue)} />
                     </div>
 
                     <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Menu</p>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-                        <MenuTile to="/admin/services"     label="Kelola Layanan"  desc={`${services.length} layanan`} />
-                        <MenuTile to="/admin/reservations" label="Reservasi"       desc={`${bookings.length} total`} />
-                        <MenuTile to="/admin/payments"     label="Pembayaran"      desc={`${pendingPayments} verifikasi`} />
-                        <MenuTile to="/admin/reports"      label="Laporan"         desc="Export PDF & Excel" />
-                        <MenuTile to="/profile"            label="Profil"          desc="Edit akun" />
+                        <MenuTile to="/admin/services" label="Kelola Layanan" desc={`${services.length} layanan`} />
+                        <MenuTile to="/admin/reservations" label="Reservasi" desc={`${bookings.length} total`} />
+                        <MenuTile to="/admin/payments" label="Pembayaran" desc={`${pendingPayments} verifikasi`} />
+                        <MenuTile to="/admin/reports" label="Laporan" desc="Export PDF & Excel" />
+                        <MenuTile to="/profile" label="Profil" desc="Edit akun" />
                     </div>
 
                     <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Booking Terbaru</p>
@@ -96,7 +95,6 @@ export default function Dashboard() {
                                     <p className="text-sm font-medium" style={{ color: 'var(--brown)' }}>{b.customerName}</p>
                                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{b.serviceName} · {b.date}</p>
                                 </div>
-                                {/* Badge dari Flowbite → Default badge */}
                                 <Badge color={statusColor(b.status)}>{b.status}</Badge>
                             </div>
                         ))}
@@ -106,16 +104,16 @@ export default function Dashboard() {
                 <>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                         <StatCard label="Total Booking" value={mine.length} />
-                        <StatCard label="Menunggu"      value={mine.filter(b => b.status === 'pending').length} />
-                        <StatCard label="Selesai"       value={mine.filter(b => b.status === 'completed').length} />
+                        <StatCard label="Menunggu" value={mine.filter(b => b.status === 'pending').length} />
+                        <StatCard label="Selesai" value={mine.filter(b => b.status === 'completed').length} />
                         <StatCard label="Total Belanja" value={fmt(totalSpend)} />
                     </div>
 
                     <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Menu</p>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-                        <MenuTile to="/booking"     label="Booking Baru"   desc="Pesan layanan" />
-                        <MenuTile to="/my-bookings" label="Cek Reservasi"  desc={`${mine.length} booking`} />
-                        <MenuTile to="/profile"     label="Profil"         desc="Edit akun" />
+                        <MenuTile to="/booking" label="Booking Baru" desc="Pesan layanan" />
+                        <MenuTile to="/my-bookings" label="Cek Reservasi" desc={`${mine.length} booking`} />
+                        <MenuTile to="/profile" label="Profil" desc="Edit akun" />
                     </div>
 
                     {mine.length > 0 && (

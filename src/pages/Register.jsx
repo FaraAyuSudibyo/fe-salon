@@ -1,20 +1,5 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Label
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Form label" — label teks di atas setiap input form
-//
-// 🔗 TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Default input" — input nama, email, password
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol Daftar full width
-// ============================================================
 import { Label, TextInput, Button } from "flowbite-react"
 import { useAuth } from "../context/AuthContext"
 
@@ -22,18 +7,18 @@ export default function Register() {
     const { register } = useAuth()
     const navigate = useNavigate()
     const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "" })
-    const [error,   setError]   = useState("")
+    const [error, setError] = useState("")
     const [success, setSuccess] = useState(false)
     const [loading, setLoading] = useState(false)
     const set = (f, v) => setForm(p => ({ ...p, [f]: v }))
 
-    function handleRegister() {
+    async function handleRegister() {
         const { name, email, phone, password, confirm } = form
         if (!name || !email || !phone || !password) { setError("Semua field wajib diisi"); return }
         if (password !== confirm) { setError("Konfirmasi password tidak cocok"); return }
         if (password.length < 6) { setError("Password minimal 6 karakter"); return }
         setLoading(true); setError("")
-        const r = register(name, email, password, phone)
+        const r = await register(name, email, password, phone)
         setLoading(false)
         if (r.success) { setSuccess(true); setTimeout(() => navigate("/login"), 2000) }
         else setError(r.message)
@@ -41,13 +26,9 @@ export default function Register() {
 
     return (
         <div className="min-h-screen flex" style={{ backgroundColor: 'var(--white)' }}>
-
-            {/* Kiri — putih + logo */}
             <div className="hidden lg:flex w-1/2 flex-col items-center justify-center border-r p-12" style={{ backgroundColor: '#ffffff', borderColor: 'var(--border)' }}>
                 <img src="/logo.png" alt="Dream Beauty" className="w-80 object-contain mb-5" />
             </div>
-
-            {/* Kanan — form */}
             <div className="flex-1 flex items-center justify-center p-10" style={{ backgroundColor: 'var(--cream)' }}>
                 <div className="w-full max-w-sm fade-in">
 

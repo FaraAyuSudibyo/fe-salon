@@ -1,31 +1,8 @@
 import { useState } from "react"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Table + TableHead + TableBody + TableRow + TableCell + TableHeadCell
-//    Docs  : https://flowbite-react.com/docs/components/table
-//    Contoh: "Default table" — tabel daftar semua pembayaran
-//
-// 🔗 Badge
-//    Docs  : https://flowbite-react.com/docs/components/badge
-//    Contoh: "Default badge" — status pembayaran (Paid/Unpaid/Partial)
-//
-// 🔗 Modal + ModalHeader + ModalBody + ModalFooter
-//    Docs  : https://flowbite-react.com/docs/components/modal
-//    Contoh: "Default modal" — popup konfirmasi update status bayar
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol Update Status Pembayaran
-//
-// 🔗 Tabs + TabItem
-//    Docs  : https://flowbite-react.com/docs/components/tabs
-//    Contoh: "Default tabs" — tab filter: Semua / Belum Bayar / Lunas
-// ============================================================
 import {
     Table, TableHead, TableBody, TableRow, TableCell, TableHeadCell,
     Badge, Modal, ModalHeader, ModalBody, ModalFooter,
-    Button, Tabs, TabItem
+    Button
 } from "flowbite-react"
 import { useBooking } from "../context/BookingContext"
 
@@ -82,14 +59,22 @@ function PayTable({ data, onView, onConfirm, onReject }) {
 
 export default function ManagePayments() {
     const { bookings, confirmPayment, rejectPayment } = useBooking()
-    const [viewB,        setViewB]        = useState(null)
-    const [rejectId,     setRejectId]     = useState(null)
+    const [activeTab, setActiveTab] = useState(0)
+    const [viewB, setViewB] = useState(null)
+    const [rejectId, setRejectId] = useState(null)
     const [rejectReason, setRejectReason] = useState('')
 
-    const nonCash   = [...bookings].reverse().filter(b => b.paymentMethod !== 'cash')
+    const nonCash = [...bookings].reverse().filter(b => b.paymentMethod !== 'cash')
     const needVerif = nonCash.filter(b => b.paymentStatus === 'pending_verification')
-    const paid      = nonCash.filter(b => b.paymentStatus === 'paid')
-    const unpaid    = nonCash.filter(b => b.paymentStatus === 'unpaid')
+    const paid = nonCash.filter(b => b.paymentStatus === 'paid')
+    const unpaid = nonCash.filter(b => b.paymentStatus === 'unpaid')
+
+    const tabs = [
+        { label: `Perlu Verifikasi (${needVerif.length})`, data: needVerif },
+        { label: `Lunas (${paid.length})`, data: paid },
+        { label: `Belum Bayar (${unpaid.length})`, data: unpaid },
+        { label: `Semua (${nonCash.length})`, data: nonCash },
+    ]
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-10">
@@ -102,8 +87,8 @@ export default function ManagePayments() {
             <div className="flex gap-3 mb-6 flex-wrap">
                 {[
                     { label: 'Perlu Verifikasi', value: needVerif.length, bg: '#f7f0e0', color: '#8a6a30' },
-                    { label: 'Lunas',            value: paid.length,      bg: '#e8f0e8', color: '#4a7c59' },
-                    { label: 'Belum Bayar',      value: unpaid.length,    bg: '#f5e8e8', color: '#9b4f4f' },
+                    { label: 'Lunas', value: paid.length, bg: '#e8f0e8', color: '#4a7c59' },
+                    { label: 'Belum Bayar', value: unpaid.length, bg: '#f5e8e8', color: '#9b4f4f' },
                 ].map(s => (
                     <div key={s.label} className="px-6 py-3 rounded-lg text-center" style={{ backgroundColor: s.bg }}>
                         <p style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '26px', color: s.color, lineHeight: 1 }}>{s.value}</p>
@@ -112,21 +97,28 @@ export default function ManagePayments() {
                 ))}
             </div>
 
-            {/* Tabs dari Flowbite → Default tabs */}
-            <Tabs>
-                <TabItem title={`Perlu Verifikasi (${needVerif.length})`}>
-                    <PayTable data={needVerif} onView={setViewB} onConfirm={id => { if (window.confirm('Konfirmasi?')) confirmPayment(id) }} onReject={id => { setRejectId(id); setRejectReason('') }} />
-                </TabItem>
-                <TabItem title={`Lunas (${paid.length})`}>
-                    <PayTable data={paid} onView={setViewB} onConfirm={() => {}} onReject={() => {}} />
-                </TabItem>
-                <TabItem title={`Belum Bayar (${unpaid.length})`}>
-                    <PayTable data={unpaid} onView={setViewB} onConfirm={() => {}} onReject={() => {}} />
-                </TabItem>
-                <TabItem title={`Semua (${nonCash.length})`}>
-                    <PayTable data={nonCash} onView={setViewB} onConfirm={id => { if (window.confirm('Konfirmasi?')) confirmPayment(id) }} onReject={id => { setRejectId(id); setRejectReason('') }} />
-                </TabItem>
-            </Tabs>
+            {/* Tab manual */}
+            <div className="flex gap-1 flex-wrap mb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                {tabs.map((tab, i) => (
+                    <button key={i} onClick={() => setActiveTab(i)}
+                        className="px-4 py-2 text-sm transition-colors"
+                        style={{
+                            borderBottom: activeTab === i ? '2px solid var(--rose)' : '2px solid transparent',
+                            color: activeTab === i ? 'var(--rose)' : 'var(--text-muted)',
+                            backgroundColor: 'transparent', cursor: 'pointer',
+                            fontWeight: activeTab === i ? '500' : '400'
+                        }}>
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            <PayTable
+                data={tabs[activeTab].data}
+                onView={setViewB}
+                onConfirm={id => { if (window.confirm('Konfirmasi pembayaran ini?')) confirmPayment(id) }}
+                onReject={id => { setRejectId(id); setRejectReason('') }}
+            />
 
             <Modal show={!!viewB} onClose={() => setViewB(null)}>
                 <ModalHeader>Bukti — {viewB?.customerName}</ModalHeader>

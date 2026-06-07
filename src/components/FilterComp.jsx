@@ -1,11 +1,3 @@
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Input with icon" — input search dengan icon
-//            kaca pembesar di sebelah kiri
-// ============================================================
 import { TextInput } from "flowbite-react"
 import { HiSearch } from "react-icons/hi"
 

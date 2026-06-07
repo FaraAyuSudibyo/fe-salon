@@ -1,55 +1,34 @@
 import { useState } from "react"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Tabs + TabItem
-//    Docs  : https://flowbite-react.com/docs/components/tabs
-//    Contoh: "Default tabs" — tab Profil / Ubah Password
-//
-// 🔗 Label
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Form label" — label di setiap field profil
-//
-// 🔗 TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Default input" — input nama, email, password
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol Simpan perubahan
-//
-// 🔗 FaUserCircle (react-icons/fa)
-//    Docs  : https://react-icons.github.io/react-icons/icons/fa/
-//    Dipakai sebagai foto profil — icon user bulat mengganti URL avatar
-// ============================================================
-import { Tabs, Label, TextInput, Button } from "flowbite-react"
+import { Label, TextInput, Button } from "flowbite-react"
 import { FaUserCircle } from "react-icons/fa"
 import { useAuth } from "../context/AuthContext"
 
 export default function Profile() {
     const { user, updateProfile, changePassword, isAdmin } = useAuth()
-    const [name,  setName]  = useState(user?.name  || '')
+    const [activeTab, setActiveTab] = useState(0)
+    const [name, setName] = useState(user?.name || '')
     const [phone, setPhone] = useState(user?.phone || '')
     const [profileMsg, setProfileMsg] = useState({ text: '', ok: false })
-    const [oldPass,  setOldPass]  = useState('')
-    const [newPass,  setNewPass]  = useState('')
+    const [oldPass, setOldPass] = useState('')
+    const [newPass, setNewPass] = useState('')
     const [confPass, setConfPass] = useState('')
-    const [passMsg,  setPassMsg]  = useState({ text: '', ok: false })
+    const [passMsg, setPassMsg] = useState({ text: '', ok: false })
 
-    function handleProfile(e) {
+    async function handleProfile(e) {
         e.preventDefault()
-        if (!name.trim())  { setProfileMsg({ text: 'Nama tidak boleh kosong', ok: false }); return }
+        if (!name.trim()) { setProfileMsg({ text: 'Nama tidak boleh kosong', ok: false }); return }
         if (!phone.trim()) { setProfileMsg({ text: 'Nomor telepon tidak boleh kosong', ok: false }); return }
-        updateProfile(name, phone)
-        setProfileMsg({ text: 'Profil berhasil diupdate', ok: true })
+        const r = await updateProfile(name, phone)
+        if (r?.success !== false) setProfileMsg({ text: 'Profil berhasil diupdate', ok: true })
+        else setProfileMsg({ text: r.message || 'Gagal update profil', ok: false })
     }
 
-    function handlePassword(e) {
+    async function handlePassword(e) {
         e.preventDefault()
         if (!oldPass || !newPass || !confPass) { setPassMsg({ text: 'Semua field wajib diisi', ok: false }); return }
         if (newPass !== confPass) { setPassMsg({ text: 'Konfirmasi password tidak cocok', ok: false }); return }
-        if (newPass.length < 6)  { setPassMsg({ text: 'Password minimal 6 karakter', ok: false }); return }
-        const r = changePassword(oldPass, newPass)
+        if (newPass.length < 6) { setPassMsg({ text: 'Password minimal 6 karakter', ok: false }); return }
+        const r = await changePassword(oldPass, newPass)
         if (r.success) { setPassMsg({ text: 'Password berhasil diubah', ok: true }); setOldPass(''); setNewPass(''); setConfPass('') }
         else setPassMsg({ text: r.message, ok: false })
     }
@@ -63,9 +42,10 @@ export default function Profile() {
         )
     }
 
+    const tabs = ['Edit Profil', ...(isAdmin ? [] : ['Ganti Password'])]
+
     return (
         <div className="max-w-lg mx-auto px-6 py-10">
-            {/* Header profil */}
             <div className="text-center mb-8">
                 <FaUserCircle size={80} className="mx-auto mb-3" style={{ color: 'var(--rose)' }} />
                 <h1 className="text-2xl font-normal mb-1" style={{ color: 'var(--brown)' }}>{user?.name}</h1>
@@ -76,52 +56,63 @@ export default function Profile() {
                 </span>
             </div>
 
-            <Tabs>
-                <Tabs.Item title="Edit Profil">
-                    <form onSubmit={handleProfile} className="flex flex-col gap-4 mt-4">
-                        <Msg msg={profileMsg} />
-                        <div>
-                            <Label htmlFor="name" value="Nama Lengkap" className="mb-2 block" />
-                            <TextInput id="name" value={name} onChange={e => setName(e.target.value)} />
-                        </div>
-                        <div>
-                            <Label htmlFor="email" value="Email (tidak bisa diubah)" className="mb-2 block" />
-                            <TextInput id="email" value={user?.email} disabled />
-                        </div>
-                        <div>
-                            <Label htmlFor="phone" value="No. Telepon WhatsApp" className="mb-2 block" />
-                            <TextInput id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
-                        </div>
-                        <Button type="submit" style={{ backgroundColor: 'var(--rose)', border: 'none', alignSelf: 'flex-start' }}>
-                            Simpan Perubahan
-                        </Button>
-                    </form>
-                </Tabs.Item>
+            {/* Tab manual */}
+            <div className="flex gap-1 mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
+                {tabs.map((tab, i) => (
+                    <button key={i} onClick={() => setActiveTab(i)}
+                        className="px-4 py-2 text-sm transition-colors"
+                        style={{
+                            borderBottom: activeTab === i ? '2px solid var(--rose)' : '2px solid transparent',
+                            color: activeTab === i ? 'var(--rose)' : 'var(--text-muted)',
+                            backgroundColor: 'transparent', cursor: 'pointer',
+                            fontWeight: activeTab === i ? '500' : '400'
+                        }}>
+                        {tab}
+                    </button>
+                ))}
+            </div>
 
-                {/* Tab ganti password hanya untuk customer, admin tidak bisa */}
-                {!isAdmin && (
-                    <Tabs.Item title="Ganti Password">
-                        <form onSubmit={handlePassword} className="flex flex-col gap-4 mt-4">
-                            <Msg msg={passMsg} />
-                            <div>
-                                <Label htmlFor="oldpass" value="Password Lama" className="mb-2 block" />
-                                <TextInput id="oldpass" type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} placeholder="Masukkan password lama" />
-                            </div>
-                            <div>
-                                <Label htmlFor="newpass" value="Password Baru" className="mb-2 block" />
-                                <TextInput id="newpass" type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min. 6 karakter" />
-                            </div>
-                            <div>
-                                <Label htmlFor="confpass" value="Konfirmasi Password Baru" className="mb-2 block" />
-                                <TextInput id="confpass" type="password" value={confPass} onChange={e => setConfPass(e.target.value)} placeholder="Ulangi password baru" />
-                            </div>
-                            <Button type="submit" style={{ backgroundColor: 'var(--rose)', border: 'none', alignSelf: 'flex-start' }}>
-                                Ubah Password
-                            </Button>
-                        </form>
-                    </Tabs.Item>
-                )}
-            </Tabs>
+            {activeTab === 0 && (
+                <form onSubmit={handleProfile} className="flex flex-col gap-4">
+                    <Msg msg={profileMsg} />
+                    <div>
+                        <Label htmlFor="name" value="Nama Lengkap" className="mb-2 block" />
+                        <TextInput id="name" value={name} onChange={e => setName(e.target.value)} />
+                    </div>
+                    <div>
+                        <Label htmlFor="email" value="Email (tidak bisa diubah)" className="mb-2 block" />
+                        <TextInput id="email" value={user?.email} disabled />
+                    </div>
+                    <div>
+                        <Label htmlFor="phone" value="No. Telepon" className="mb-2 block" />
+                        <TextInput id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="08xxxxxxxxxx" />
+                    </div>
+                    <Button type="submit" style={{ backgroundColor: 'var(--rose)', border: 'none', alignSelf: 'flex-start' }}>
+                        Simpan Perubahan
+                    </Button>
+                </form>
+            )}
+
+            {activeTab === 1 && !isAdmin && (
+                <form onSubmit={handlePassword} className="flex flex-col gap-4">
+                    <Msg msg={passMsg} />
+                    <div>
+                        <Label htmlFor="oldpass" value="Password Lama" className="mb-2 block" />
+                        <TextInput id="oldpass" type="password" value={oldPass} onChange={e => setOldPass(e.target.value)} placeholder="Masukkan password lama" />
+                    </div>
+                    <div>
+                        <Label htmlFor="newpass" value="Password Baru" className="mb-2 block" />
+                        <TextInput id="newpass" type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min. 6 karakter" />
+                    </div>
+                    <div>
+                        <Label htmlFor="confpass" value="Konfirmasi Password Baru" className="mb-2 block" />
+                        <TextInput id="confpass" type="password" value={confPass} onChange={e => setConfPass(e.target.value)} placeholder="Ulangi password baru" />
+                    </div>
+                    <Button type="submit" style={{ backgroundColor: 'var(--rose)', border: 'none', alignSelf: 'flex-start' }}>
+                        Ubah Password
+                    </Button>
+                </form>
+            )}
         </div>
     )
 }

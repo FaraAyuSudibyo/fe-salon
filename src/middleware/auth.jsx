@@ -9,14 +9,14 @@ export function RequireAuth({ children }) {
 export function RequireAdmin({ children }) {
   const { isLoggedIn, isAdmin } = useAuth()
   if (!isLoggedIn) return <Navigate to="/login" replace />
-  if (!isAdmin)    return <Navigate to="/unauthorized" replace />
+  if (!isAdmin) return <Navigate to="/unauthorized" replace />
   return children
 }
 
 export function RequireCustomer({ children }) {
   const { isLoggedIn, isCustomer } = useAuth()
-  if (!isLoggedIn)  return <Navigate to="/login" replace />
-  if (!isCustomer)  return <Navigate to="/unauthorized" replace />
+  if (!isLoggedIn) return <Navigate to="/login" replace />
+  if (!isCustomer) return <Navigate to="/unauthorized" replace />
   return children
 }
 

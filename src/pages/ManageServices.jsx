@@ -1,23 +1,4 @@
-import { useState } from "react"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Table + TableHead + TableBody + TableRow + TableCell + TableHeadCell
-//    Docs  : https://flowbite-react.com/docs/components/table
-//    Contoh: "Default table" — tabel daftar layanan salon
-//
-// 🔗 Modal + ModalHeader + ModalBody + ModalFooter
-//    Docs  : https://flowbite-react.com/docs/components/modal
-//    Contoh: "Default modal" — popup tambah/edit/hapus layanan
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol Tambah, Edit, Hapus
-//
-// 🔗 Label + TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Default input" — form input di dalam modal
-// ============================================================
+import { useState, useEffect } from "react"
 import {
     Table, TableHead, TableBody, TableRow, TableCell, TableHeadCell,
     Modal, ModalHeader, ModalBody, ModalFooter,
@@ -28,22 +9,49 @@ import { useBooking } from "../context/BookingContext"
 function fmt(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n) }
 
 export default function ManageServices() {
-    const { services, addService, updateService, deleteService } = useBooking()
+    const { services, fetchServices, addService, updateService, deleteService } = useBooking()
     const [formOpen, setFormOpen] = useState(false)
-    const [editSvc,  setEditSvc]  = useState(null)
-    const [delSvc,   setDelSvc]   = useState(null)
-    const [form, setForm] = useState({ name: '', category: '', price: '', duration: '', description: '', image: '' })
+    const [editSvc, setEditSvc] = useState(null)
+    const [delSvc, setDelSvc] = useState(null)
+    const [form, setForm] = useState({ name: '', category: '', price: '', duration: '', description: '', image: '', imageFile: null })
     const [error, setError] = useState('')
+    const [preview, setPreview] = useState('')
 
-    function openAdd() { setForm({ name: '', category: '', price: '', duration: '', description: '', image: '' }); setEditSvc(null); setError(''); setFormOpen(true) }
-    function openEdit(s) { setForm({ name: s.name, category: s.category, price: String(s.price), duration: String(s.duration), description: s.description, image: s.image }); setEditSvc(s); setError(''); setFormOpen(true) }
+    useEffect(() => { fetchServices() }, [])
+
+    function openAdd() { setForm({ name: '', category: '', price: '', duration: '', description: '', image: '', imageFile: null }); setPreview(''); setEditSvc(null); setError(''); setFormOpen(true) }
+    function openEdit(s) {
+        setForm({ name: s.name, category: s.category, price: String(s.price), duration: String(s.duration || ''), description: s.description, image: s.image || '', imageFile: null })
+        setPreview(s.image || '')
+        setEditSvc(s); setError(''); setFormOpen(true)
+    }
     const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+    const chFile = e => {
+        const f = e.target.files[0]; if (!f) return
+        setForm(p => ({ ...p, imageFile: f }))
+        const r = new FileReader(); r.readAsDataURL(f)
+        r.onloadend = () => setPreview(r.result)
+    }
 
-    function submit() {
+    async function submit() {
         if (!form.name || !form.category || !form.price || !form.duration) { setError('Nama, kategori, harga, durasi wajib diisi'); return }
-        const d = { name: form.name, category: form.category, price: parseInt(form.price), duration: parseInt(form.duration), description: form.description, image: form.image || 'https://images.unsplash.com/photo-1560066984-138daaa6c0b4?w=500&q=80' }
-        editSvc ? updateService(editSvc.id, d) : addService(d)
-        setFormOpen(false)
+        const data = {
+            name: form.name,
+            category: form.category,
+            price: parseInt(form.price),
+            duration: parseInt(form.duration),
+            description: form.description,
+        }
+        // jika ada file baru, kirim sebagai file; jika tidak ada dan ada URL, kirim URL sebagai image
+        if (form.imageFile) {
+            data.image = form.imageFile
+        } else if (form.image) {
+            data.image = form.image
+        }
+
+        const res = editSvc ? await updateService(editSvc.id, data) : await addService(data)
+        if (res.status === 200 || res.status === 201) setFormOpen(false)
+        else setError(res.data || 'Gagal menyimpan layanan')
     }
 
     return (
@@ -57,7 +65,6 @@ export default function ManageServices() {
                 <Button onClick={openAdd} size="sm" style={{ backgroundColor: 'var(--rose)', border: 'none', marginTop: '8px' }}>+ Tambah</Button>
             </div>
 
-            {/* Table dari Flowbite → Default table */}
             <Table hoverable>
                 <TableHead>
                     <TableHeadCell>Layanan</TableHeadCell>
@@ -94,7 +101,6 @@ export default function ManageServices() {
                 </TableBody>
             </Table>
 
-            {/* Modal tambah/edit dari Flowbite → Default modal */}
             <Modal show={formOpen} onClose={() => setFormOpen(false)} size="lg">
                 <ModalHeader>{editSvc ? 'Edit Layanan' : 'Tambah Layanan'}</ModalHeader>
                 <ModalBody>
@@ -104,7 +110,12 @@ export default function ManageServices() {
                         <div><Label value="Kategori *" className="mb-2 block" /><TextInput name="category" value={form.category} onChange={ch} /></div>
                         <div><Label value="Harga (Rp) *" className="mb-2 block" /><TextInput name="price" type="number" value={form.price} onChange={ch} /></div>
                         <div><Label value="Durasi (menit) *" className="mb-2 block" /><TextInput name="duration" type="number" value={form.duration} onChange={ch} /></div>
-                        <div className="col-span-2"><Label value="URL Gambar" className="mb-2 block" /><TextInput name="image" value={form.image} onChange={ch} /></div>
+                        <div className="col-span-2">
+                            <Label value="Upload Gambar" className="mb-2 block" />
+                            <input type="file" accept="image/*" onChange={chFile} className="w-full text-sm border rounded p-2" style={{ borderColor: '#e5e7eb' }} />
+                            {!form.imageFile && <div className="mt-1"><Label value="atau URL Gambar" className="mb-1 block text-xs" /><TextInput name="image" value={form.image} onChange={ch} placeholder="https://..." /></div>}
+                            {preview && <img src={preview} alt="preview" className="mt-2 h-24 object-cover rounded" />}
+                        </div>
                         <div className="col-span-2">
                             <Label value="Deskripsi" className="mb-2 block" />
                             <textarea name="description" value={form.description} onChange={ch} rows={3} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: '#e5e7eb' }} />

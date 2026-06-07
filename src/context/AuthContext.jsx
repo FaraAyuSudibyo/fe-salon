@@ -2,50 +2,104 @@ import { createContext, useContext, useState } from 'react'
 
 const AuthContext = createContext()
 
-const USERS = [
-  { id: 1, name: 'Admin', email: 'admin@gmail.com', password: 'admin123', role: 'admin', phone: '081234567890' },
-  { id: 2, name: 'Fara', email: 'fara@gmail.com', password: 'customer123', role: 'customer', phone: '089876543210' },
-]
+const BASE_URL = 'http://localhost:3000'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { const s = localStorage.getItem('dbUser'); return s ? JSON.parse(s) : null } catch { return null }
   })
+  const [token, setToken] = useState(() => {
+    try { return localStorage.getItem('dbToken') || null } catch { return null }
+  })
 
-  function login(email, password) {
-    const found = USERS.find(u => u.email === email && u.password === password)
-    if (found) {
-      const { password: _, ...safe } = found
-      setUser(safe); localStorage.setItem('dbUser', JSON.stringify(safe))
-      return { success: true }
+  async function login(email, password) {
+    try {
+      const formData = new FormData()
+      formData.append('email', email)
+      formData.append('password', password)
+
+      const res = await fetch(`${BASE_URL}/auth/login`, {
+        method: 'POST',
+        body: formData
+      })
+      const json = await res.json()
+      if (json.status === 200) {
+        setUser(json.data.user)
+        setToken(json.data.token)
+        localStorage.setItem('dbUser', JSON.stringify(json.data.user))
+        localStorage.setItem('dbToken', json.data.token)
+        return { success: true }
+      }
+      return { success: false, message: json.data || 'Email atau password salah' }
+    } catch (e) {
+      return { success: false, message: 'Gagal terhubung ke server' }
     }
-    return { success: false, message: 'Email atau password salah' }
   }
 
-  function logout() { setUser(null); localStorage.removeItem('dbUser') }
-
-  function register(name, email, password, phone) {
-    if (!phone) return { success: false, message: 'Nomor telepon wajib diisi untuk notifikasi WhatsApp' }
-    if (USERS.find(u => u.email === email)) return { success: false, message: 'Email sudah digunakan' }
-    USERS.push({ id: Date.now(), name, email, password, phone, role: 'customer' })
-    return { success: true }
+  function logout() {
+    setUser(null); setToken(null)
+    localStorage.removeItem('dbUser')
+    localStorage.removeItem('dbToken')
   }
 
-  function updateProfile(name, phone) {
-    const updated = { ...user, name, phone }
-    setUser(updated); localStorage.setItem('dbUser', JSON.stringify(updated))
+  async function register(name, email, password, phone) {
+    try {
+      const formData = new FormData()
+      formData.append('name', name)
+      formData.append('email', email)
+      formData.append('password', password)
+      formData.append('phone', phone)
+
+      const res = await fetch(`${BASE_URL}/auth/register`, {
+        method: 'POST',
+        body: formData
+      })
+      const json = await res.json()
+      if (json.status === 201) return { success: true }
+      return { success: false, message: json.data || 'Gagal mendaftar' }
+    } catch (e) {
+      return { success: false, message: 'Gagal terhubung ke server' }
+    }
   }
 
-  function changePassword(oldPass, newPass) {
-    const found = USERS.find(u => u.id === user.id)
-    if (!found || found.password !== oldPass) return { success: false, message: 'Password lama salah' }
-    found.password = newPass
-    return { success: true }
+  async function updateProfile(name, phone) {
+    try {
+      const res = await fetch(`${BASE_URL}/profile`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ name, phone })
+      })
+      const json = await res.json()
+      if (json.status === 200) {
+        const updated = { ...user, name: json.data.name, phone: json.data.phone }
+        setUser(updated)
+        localStorage.setItem('dbUser', JSON.stringify(updated))
+        return { success: true }
+      }
+      return { success: false, message: 'Gagal update profil' }
+    } catch (e) {
+      return { success: false, message: 'Gagal terhubung ke server' }
+    }
+  }
+
+  async function changePassword(oldPass, newPass) {
+    try {
+      const res = await fetch(`${BASE_URL}/profile/change-password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ old_password: oldPass, new_password: newPass })
+      })
+      const json = await res.json()
+      if (json.status === 200) return { success: true }
+      return { success: false, message: json.data || 'Gagal ganti password' }
+    } catch (e) {
+      return { success: false, message: 'Gagal terhubung ke server' }
+    }
   }
 
   return (
     <AuthContext.Provider value={{
-      user, isLoggedIn: !!user,
+      user, token, isLoggedIn: !!user,
       isAdmin: user?.role === 'admin',
       isCustomer: user?.role === 'customer',
       login, logout, register, updateProfile, changePassword

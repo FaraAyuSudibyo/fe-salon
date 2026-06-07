@@ -1,11 +1,3 @@
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol "Book" di bawah card,
-//            ukuran sm, warna dikustom pakai style
-// ============================================================
 import { Button } from "flowbite-react"
 import { Link } from "react-router-dom"
 

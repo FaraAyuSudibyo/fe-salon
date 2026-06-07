@@ -1,21 +1,3 @@
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Navbar + NavbarBrand + NavbarCollapse + NavbarLink + NavbarToggle
-//    Docs  : https://flowbite-react.com/docs/components/navbar
-//    Contoh: "Navbar with user dropdown" — navbar sticky dengan
-//            logo di kiri, menu di tengah, dropdown user di kanan
-//
-// 🔗 Dropdown + DropdownItem + DropdownDivider + DropdownHeader
-//    Docs  : https://flowbite-react.com/docs/components/dropdown
-//    Contoh: "Dropdown with avatar" — dropdown muncul saat klik
-//            icon profil user (mengganti Avatar flowbite)
-//
-// 🔗 FaUserCircle (react-icons/fa)
-//    Docs  : https://react-icons.github.io/react-icons/icons/fa/
-//    Dipakai sebagai pengganti Avatar Flowbite — icon user bulat
-//    yang bisa diklik untuk membuka dropdown profil
-// ============================================================
 import {
     Navbar,
     NavbarBrand,
@@ -42,19 +24,16 @@ export default function NavbarComp() {
 
     return (
         <Navbar fluid className="bg-white border-b border-gray-100 sticky top-0 z-50">
-            {/* Logo */}
             <NavbarBrand as={Link} to="/">
                 <img src="/logo.png" className="mr-3 h-10" alt="Dream Beauty" />
             </NavbarBrand>
 
-            {/* Kanan: icon user + dropdown atau tombol login */}
             <div className="flex md:order-2 items-center gap-3">
                 {isLoggedIn ? (
                     <Dropdown
                         arrowIcon={false}
                         inline
                         label={
-                            // FaUserCircle dari react-icons sebagai pengganti Avatar flowbite
                             <FaUserCircle
                                 size={32}
                                 style={{ color: 'var(--rose)', cursor: 'pointer' }}

@@ -1,29 +1,14 @@
 import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
-// ============================================================
-// FLOWBITE COMPONENTS YANG DIPAKAI DI FILE INI:
-//
-// 🔗 Label
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Form label" — label teks di atas input email/password
-//
-// 🔗 TextInput
-//    Docs  : https://flowbite-react.com/docs/components/forms
-//    Contoh: "Default input" — input email dan password
-//
-// 🔗 Button
-//    Docs  : https://flowbite-react.com/docs/components/button
-//    Contoh: "Default button" — tombol Masuk full width
-// ============================================================
 import { Label, TextInput, Button } from "flowbite-react"
 import { useAuth } from "../context/AuthContext"
 
 export default function Login() {
     const { login } = useAuth()
-    const navigate  = useNavigate()
-    const [email,   setEmail]   = useState("")
-    const [pass,    setPass]    = useState("")
-    const [error,   setError]   = useState("")
+    const navigate = useNavigate()
+    const [email, setEmail] = useState("")
+    const [pass, setPass] = useState("")
+    const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
 
     useEffect(() => {
@@ -31,10 +16,10 @@ export default function Login() {
         return () => { document.body.style.overflow = "" }
     }, [])
 
-    function handleLogin() {
+    async function handleLogin() {
         if (!email || !pass) { setError("Email dan password wajib diisi"); return }
         setLoading(true); setError("")
-        const r = login(email, pass)
+        const r = await login(email, pass)
         setLoading(false)
         if (r.success) navigate("/dashboard")
         else setError(r.message)
@@ -42,13 +27,9 @@ export default function Login() {
 
     return (
         <div className="h-screen overflow-hidden flex" style={{ backgroundColor: 'var(--white)' }}>
-
-            {/* Kiri — putih + logo */}
             <div className="hidden lg:flex w-1/2 flex-col items-center justify-center border-r p-12" style={{ backgroundColor: '#ffffff', borderColor: 'var(--border)' }}>
                 <img src="/logo.png" alt="Dream Beauty" className="w-80 object-contain mb-5" />
             </div>
-
-            {/* Kanan — form */}
             <div className="flex-1 flex items-center justify-center p-10" style={{ backgroundColor: 'var(--cream)' }}>
                 <div className="w-full max-w-sm fade-in">
 
