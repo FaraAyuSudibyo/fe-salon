@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import {
     Table, TableHead, TableBody, TableRow, TableCell, TableHeadCell,
     Modal, ModalHeader, ModalBody, ModalFooter,
-    Button, Label, TextInput
+    Button, TextInput
 } from "flowbite-react"
 import { useBooking } from "../context/BookingContext"
 
@@ -19,13 +19,19 @@ export default function ManageServices() {
 
     useEffect(() => { fetchServices() }, [])
 
-    function openAdd() { setForm({ name: '', category: '', price: '', duration: '', description: '', image: '', imageFile: null }); setPreview(''); setEditSvc(null); setError(''); setFormOpen(true) }
+    function openAdd() {
+        setForm({ name: '', category: '', price: '', duration: '', description: '', image: '', imageFile: null })
+        setPreview(''); setEditSvc(null); setError(''); setFormOpen(true)
+    }
+
     function openEdit(s) {
         setForm({ name: s.name, category: s.category, price: String(s.price), duration: String(s.duration || ''), description: s.description, image: s.image || '', imageFile: null })
-        setPreview(s.image || '')
+        setPreview(s.image?.startsWith('http') ? s.image : s.image ? `http://localhost:3000/uploads/${s.image}` : '')
         setEditSvc(s); setError(''); setFormOpen(true)
     }
+
     const ch = e => setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+
     const chFile = e => {
         const f = e.target.files[0]; if (!f) return
         setForm(p => ({ ...p, imageFile: f }))
@@ -34,7 +40,9 @@ export default function ManageServices() {
     }
 
     async function submit() {
-        if (!form.name || !form.category || !form.price || !form.duration) { setError('Nama, kategori, harga, durasi wajib diisi'); return }
+        if (!form.name || !form.category || !form.price || !form.duration) {
+            setError('Nama, kategori, harga, durasi wajib diisi'); return
+        }
         const data = {
             name: form.name,
             category: form.category,
@@ -42,12 +50,8 @@ export default function ManageServices() {
             duration: parseInt(form.duration),
             description: form.description,
         }
-        // jika ada file baru, kirim sebagai file; jika tidak ada dan ada URL, kirim URL sebagai image
-        if (form.imageFile) {
-            data.image = form.imageFile
-        } else if (form.image) {
-            data.image = form.image
-        }
+        if (form.imageFile) data.image = form.imageFile
+        else if (form.image) data.image = form.image
 
         const res = editSvc ? await updateService(editSvc.id, data) : await addService(data)
         if (res.status === 200 || res.status === 201) setFormOpen(false)
@@ -78,7 +82,11 @@ export default function ManageServices() {
                         <TableRow key={s.id}>
                             <TableCell>
                                 <div className="flex items-center gap-3">
-                                    <img src={s.image} alt={s.name} className="w-11 h-11 object-cover rounded" />
+                                    <img
+                                        src={s.image?.startsWith('http') ? s.image : `http://localhost:3000/uploads/${s.image}`}
+                                        alt={s.name}
+                                        className="w-11 h-11 object-cover rounded"
+                                    />
                                     <div>
                                         <p className="font-medium text-sm" style={{ color: 'var(--brown)' }}>{s.name}</p>
                                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{s.description}</p>
@@ -106,18 +114,29 @@ export default function ManageServices() {
                 <ModalBody>
                     {error && <div className="p-3 rounded mb-4 text-sm" style={{ backgroundColor: '#f5e8e8', color: '#9b4f4f' }}>{error}</div>}
                     <div className="grid grid-cols-2 gap-4">
-                        <div><Label value="Nama *" className="mb-2 block" /><TextInput name="name" value={form.name} onChange={ch} /></div>
-                        <div><Label value="Kategori *" className="mb-2 block" /><TextInput name="category" value={form.category} onChange={ch} /></div>
-                        <div><Label value="Harga (Rp) *" className="mb-2 block" /><TextInput name="price" type="number" value={form.price} onChange={ch} /></div>
-                        <div><Label value="Durasi (menit) *" className="mb-2 block" /><TextInput name="duration" type="number" value={form.duration} onChange={ch} /></div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Nama *</label>
+                            <TextInput name="name" value={form.name} onChange={ch} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Kategori *</label>
+                            <TextInput name="category" value={form.category} onChange={ch} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Harga (Rp) *</label>
+                            <TextInput name="price" type="number" value={form.price} onChange={ch} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Durasi (menit) *</label>
+                            <TextInput name="duration" type="number" value={form.duration} onChange={ch} />
+                        </div>
                         <div className="col-span-2">
-                            <Label value="Upload Gambar" className="mb-2 block" />
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Upload Gambar</label>
                             <input type="file" accept="image/*" onChange={chFile} className="w-full text-sm border rounded p-2" style={{ borderColor: '#e5e7eb' }} />
-                            {!form.imageFile && <div className="mt-1"><Label value="atau URL Gambar" className="mb-1 block text-xs" /><TextInput name="image" value={form.image} onChange={ch} placeholder="https://..." /></div>}
                             {preview && <img src={preview} alt="preview" className="mt-2 h-24 object-cover rounded" />}
                         </div>
                         <div className="col-span-2">
-                            <Label value="Deskripsi" className="mb-2 block" />
+                            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--brown)' }}>Deskripsi</label>
                             <textarea name="description" value={form.description} onChange={ch} rows={3} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: '#e5e7eb' }} />
                         </div>
                     </div>
@@ -130,7 +149,9 @@ export default function ManageServices() {
 
             <Modal show={!!delSvc} onClose={() => setDelSvc(null)} size="sm">
                 <ModalHeader>Hapus Layanan</ModalHeader>
-                <ModalBody><p className="text-sm" style={{ color: 'var(--text-muted)' }}>Yakin hapus <strong>"{delSvc?.name}"</strong>?</p></ModalBody>
+                <ModalBody>
+                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Yakin hapus <strong>"{delSvc?.name}"</strong>?</p>
+                </ModalBody>
                 <ModalFooter>
                     <Button color="failure" onClick={() => { deleteService(delSvc.id); setDelSvc(null) }}>Hapus</Button>
                     <Button color="gray" onClick={() => setDelSvc(null)}>Batal</Button>
