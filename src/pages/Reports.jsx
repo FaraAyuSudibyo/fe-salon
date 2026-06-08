@@ -1,16 +1,62 @@
 import { useState, useEffect } from "react"
 import { Badge } from "flowbite-react"
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from "recharts"
 import { useAuth } from "../context/AuthContext"
 import { useBooking } from "../context/BookingContext"
+
+
 const BASE_URL = 'http://localhost:3000'
 
-function fmt(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n) }
+// warna tema salon
+const WARNA_ROSE = '#c4a0a0'
+const WARNA_BROWN = '#6b4f4f'
+const WARNA_CHART = ['#c4a0a0', '#a0b4c4', '#a0c4a8', '#c4bca0', '#b4a0c4', '#c4a0b8', '#a0c4c4']
+
+function fmt(n) {
+    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n)
+}
+
+function fmtSingkat(n) {
+    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}jt`
+    if (n >= 1000) return `${(n / 1000).toFixed(0)}rb`
+    return String(n)
+}
 
 function statusColor(s) {
     if (s === 'completed') return 'success'
     if (s === 'cancelled') return 'failure'
     if (s === 'confirmed') return 'indigo'
     return 'warning'
+}
+
+// Tooltip custom untuk bar chart
+function TooltipBarChart({ active, payload, label }) {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-white border rounded-lg p-3 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+                <p className="text-xs font-medium mb-1" style={{ color: 'var(--brown)' }}>{label}</p>
+                <p className="text-xs" style={{ color: 'var(--rose)' }}>{fmt(payload[0].value)}</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{payload[0].payload.count} booking</p>
+            </div>
+        )
+    }
+    return null
+}
+
+// Tooltip custom untuk pie chart
+function TooltipPieChart({ active, payload }) {
+    if (active && payload && payload.length) {
+        return (
+            <div className="bg-white border rounded-lg p-3 shadow-sm" style={{ borderColor: 'var(--border)' }}>
+                <p className="text-xs font-medium mb-1" style={{ color: 'var(--brown)' }}>{payload[0].name}</p>
+                <p className="text-xs" style={{ color: 'var(--rose)' }}>{payload[0].value} booking</p>
+            </div>
+        )
+    }
+    return null
 }
 
 export default function Reports() {
@@ -22,7 +68,6 @@ export default function Reports() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // fetch semua data dari BE
         Promise.all([
             fetch(`${BASE_URL}/reports/summary`, { headers: { Authorization: token } }).then(r => r.json()),
             fetch(`${BASE_URL}/reports/revenue-by-service`, { headers: { Authorization: token } }).then(r => r.json()),
@@ -34,19 +79,31 @@ export default function Reports() {
         }).catch(() => setLoading(false))
     }, [token])
 
-    const maxCount = Math.max(...revenueByService.map(s => s.count), 1)
+    // data untuk pie chart status booking
+    const dataStatusBooking = [
+        { name: 'Pending', value: bookings.filter(b => b.status === 'pending').length },
+        { name: 'Confirmed', value: bookings.filter(b => b.status === 'confirmed').length },
+        { name: 'In Progress', value: bookings.filter(b => b.status === 'in_progress').length },
+        { name: 'Completed', value: bookings.filter(b => b.status === 'completed').length },
+        { name: 'Cancelled', value: bookings.filter(b => b.status === 'cancelled').length },
+    ].filter(d => d.value > 0)  // hanya tampilkan yang ada datanya
 
     function exportExcel() {
         const rows = [
             ['ID', 'Customer', 'Layanan', 'Jenis', 'Tanggal', 'Jam', 'Total', 'Status', 'Pembayaran'],
-            ...[...bookings].reverse().map(b => [b.id, b.customerName, b.serviceName, b.serviceType, b.date, b.time, b.totalPrice || b.servicePrice, b.status, b.paymentStatus])
+            ...[...bookings].reverse().map(b => [
+                b.id, b.customerName, b.serviceName, b.serviceType,
+                b.date, b.time, b.totalPrice || b.servicePrice, b.status, b.paymentStatus
+            ])
         ]
         const csv = rows.map(r => r.join(',')).join('\n')
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
-        a.href = url; a.download = `laporan-dream-beauty-${new Date().toISOString().split('T')[0]}.csv`
-        a.click(); URL.revokeObjectURL(url)
+        a.href = url
+        a.download = `laporan-dream-beauty-${new Date().toISOString().split('T')[0]}.csv`
+        a.click()
+        URL.revokeObjectURL(url)
     }
 
     function exportPDF() { window.print() }
@@ -59,6 +116,8 @@ export default function Reports() {
 
     return (
         <div className="max-w-5xl mx-auto px-6 py-10">
+
+            {/* Header */}
             <div className="flex justify-between items-start mb-8">
                 <div>
                     <p className="text-xs uppercase tracking-widest mb-1" style={{ color: 'var(--rose)' }}>Admin</p>
@@ -71,12 +130,12 @@ export default function Reports() {
                 </div>
             </div>
 
-            {/* Stats dari BE */}
+            {/* Kartu Statistik */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
                 {[
                     { label: 'Total Booking', value: summary?.totalBookings ?? 0, bg: 'var(--blush-light)' },
                     { label: 'Pendapatan', value: fmt(summary?.totalRevenue ?? 0), bg: '#e8f0e8' },
-                    { label: 'Selesai', value: summary?.totalBookings - summary?.pendingBookings ?? 0, bg: '#e8f0e8' },
+                    { label: 'Selesai', value: summary?.totalBookings - (summary?.pendingBookings ?? 0), bg: '#e8f0e8' },
                     { label: 'Home Service', value: summary?.homeServiceCount ?? 0, bg: '#f0e8f7' },
                     { label: 'Pelanggan', value: summary?.totalCustomers ?? 0, bg: '#f5e8e8' },
                 ].map(s => (
@@ -87,25 +146,105 @@ export default function Reports() {
                 ))}
             </div>
 
-            {/* Grafik revenue per layanan dari BE */}
-            <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Layanan Terpopuler</p>
-            <div className="bg-white border rounded-lg p-6 mb-8" style={{ borderColor: 'var(--border)' }}>
+            {/* Chart 1 — Bar Chart Pendapatan per Layanan */}
+            <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Pendapatan per Layanan</p>
+            <div className="bg-white border rounded-lg p-6 mb-6" style={{ borderColor: 'var(--border)' }}>
                 {revenueByService.length === 0 ? (
-                    <p className="text-center text-sm" style={{ color: 'var(--text-muted)' }}>Belum ada data</p>
-                ) : revenueByService.map(s => (
-                    <div key={s.service_name} className="mb-4">
-                        <div className="flex justify-between text-xs mb-1">
-                            <span style={{ color: 'var(--brown)' }}>{s.service_name}</span>
-                            <span style={{ color: 'var(--text-muted)' }}>{s.count} booking · {fmt(s.total)}</span>
-                        </div>
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--cream-dark)' }}>
-                            <div className="h-full rounded-full transition-all" style={{ backgroundColor: 'var(--rose)', width: `${(s.count / maxCount) * 100}%` }} />
-                        </div>
-                    </div>
-                ))}
+                    <p className="text-center text-sm py-8" style={{ color: 'var(--text-muted)' }}>Belum ada data</p>
+                ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={revenueByService} margin={{ top: 10, right: 10, left: 10, bottom: 60 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0ebe8" />
+                            <XAxis
+                                dataKey="service_name"
+                                tick={{ fontSize: 11, fill: WARNA_BROWN }}
+                                angle={-30}
+                                textAnchor="end"
+                                interval={0}
+                            />
+                            <YAxis
+                                tick={{ fontSize: 11, fill: WARNA_BROWN }}
+                                tickFormatter={fmtSingkat}
+                            />
+                            <Tooltip content={<TooltipBarChart />} />
+                            <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                                {revenueByService.map((_, i) => (
+                                    <Cell key={i} fill={WARNA_CHART[i % WARNA_CHART.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                )}
             </div>
 
-            {/* Riwayat booking dari BookingContext (sudah fetch dari BE) */}
+            {/* Chart 2 — Pie Chart Status Booking */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Status Booking</p>
+                    <div className="bg-white border rounded-lg p-6" style={{ borderColor: 'var(--border)' }}>
+                        {dataStatusBooking.length === 0 ? (
+                            <p className="text-center text-sm py-8" style={{ color: 'var(--text-muted)' }}>Belum ada data</p>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={250}>
+                                <PieChart>
+                                    <Pie
+                                        data={dataStatusBooking}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={90}
+                                        paddingAngle={3}
+                                        dataKey="value"
+                                    >
+                                        {dataStatusBooking.map((_, i) => (
+                                            <Cell key={i} fill={WARNA_CHART[i % WARNA_CHART.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip content={<TooltipPieChart />} />
+                                    <Legend
+                                        iconType="circle"
+                                        iconSize={8}
+                                        formatter={(value) => (
+                                            <span style={{ fontSize: '11px', color: WARNA_BROWN }}>{value}</span>
+                                        )}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+
+                {/* Chart 3 — Bar Chart Jumlah Booking per Layanan */}
+                <div>
+                    <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Booking per Layanan</p>
+                    <div className="bg-white border rounded-lg p-6" style={{ borderColor: 'var(--border)' }}>
+                        {revenueByService.length === 0 ? (
+                            <p className="text-center text-sm py-8" style={{ color: 'var(--text-muted)' }}>Belum ada data</p>
+                        ) : (
+                            <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={revenueByService} layout="vertical" margin={{ top: 0, right: 20, left: 80, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0ebe8" horizontal={false} />
+                                    <XAxis type="number" tick={{ fontSize: 11, fill: WARNA_BROWN }} />
+                                    <YAxis
+                                        type="category"
+                                        dataKey="service_name"
+                                        tick={{ fontSize: 10, fill: WARNA_BROWN }}
+                                        width={75}
+                                    />
+                                    <Tooltip content={<TooltipBarChart />} />
+                                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                                        {revenueByService.map((_, i) => (
+                                            <Cell key={i} fill={WARNA_CHART[i % WARNA_CHART.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Riwayat Booking */}
             <p className="text-xs uppercase tracking-widest mb-3" style={{ color: 'var(--rose)' }}>Riwayat Booking</p>
             <div className="bg-white border rounded-lg overflow-hidden" style={{ borderColor: 'var(--border)' }}>
                 {bookings.length === 0 ? (

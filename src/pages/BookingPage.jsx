@@ -37,13 +37,13 @@ export default function BookingPage() {
         setError(""); setLoading(true)
 
         const res = await addBooking({
-            serviceId:     selected.id,
-            serviceType:   form.serviceType,
-            address:       form.address,
-            date:          form.date,
-            time:          form.time,
+            serviceId: selected.id,
+            serviceType: form.serviceType,
+            address: form.address,
+            date: form.date,
+            time: form.time,
             paymentMethod: form.paymentMethod,
-            notes:         form.notes,
+            notes: form.notes,
         })
         setLoading(false)
         if (res.status === 201) { setSuccess(true); setTimeout(() => navigate("/my-bookings"), 2000) }
@@ -100,7 +100,7 @@ export default function BookingPage() {
                         </div>
                     ) : (
                         <div className="p-3 rounded mb-4 text-center text-xs" style={{ backgroundColor: 'var(--cream-dark)', color: 'var(--text-muted)' }}>
-                            ← Pilih layanan dulu
+                            Pilih layanan dulu
                         </div>
                     )}
 
@@ -111,7 +111,7 @@ export default function BookingPage() {
                             <Label value="Jenis Layanan" className="mb-2 block" />
                             <div className="grid grid-cols-2 gap-2">
                                 {[
-                                    { val: 'onsite',      label: 'Onsite',       sub: 'Datang ke salon' },
+                                    { val: 'onsite', label: 'Onsite', sub: 'Datang ke salon' },
                                     { val: 'homeservice', label: 'Home Service', sub: `+${fmt(HOME_SERVICE_FEE)}` },
                                 ].map(o => (
                                     <div key={o.val} onClick={() => set('serviceType', o.val)}

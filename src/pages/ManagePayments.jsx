@@ -6,6 +6,8 @@ import {
 } from "flowbite-react"
 import { useBooking } from "../context/BookingContext"
 
+const BE_URL = 'http://localhost:3000'
+
 function fmt(n) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n) }
 
 function payColor(s) {
@@ -14,7 +16,8 @@ function payColor(s) {
     return 'failure'
 }
 
-function PayTable({ data, onView, onConfirm, onReject }) {
+// showAksi = true hanya di tab Perlu Verifikasi
+function PayTable({ data, onView, onConfirm, onReject, showAksi }) {
     if (!data.length) return <p className="text-center py-10 text-gray-400">Tidak ada data</p>
     return (
         <Table hoverable>
@@ -43,11 +46,19 @@ function PayTable({ data, onView, onConfirm, onReject }) {
                         <TableCell><Badge color={payColor(b.paymentStatus)}>{b.paymentStatus}</Badge></TableCell>
                         <TableCell>
                             <div className="flex gap-1 flex-wrap">
-                                {b.paymentProof && <Button size="xs" color="gray" onClick={() => onView(b)}>Lihat Bukti</Button>}
-                                {b.paymentStatus === 'pending_verification' && <>
-                                    <Button size="xs" color="success" onClick={() => onConfirm(b.id)}>✓</Button>
-                                    <Button size="xs" color="failure" onClick={() => onReject(b.id)}>✕</Button>
+                                {/* Lihat Bukti hanya tampil kalau ada bukti */}
+                                {b.paymentProof && (
+                                    <Button size="xs" color="gray" onClick={() => onView(b)}>Lihat Bukti</Button>
+                                )}
+                                {/* Konfirmasi & Tolak hanya tampil di tab Perlu Verifikasi */}
+                                {showAksi && <>
+                                    <Button size="xs" color="success" onClick={() => onConfirm(b.id)}>Konfirmasi</Button>
+                                    <Button size="xs" color="failure" onClick={() => onReject(b.id)}>Tolak</Button>
                                 </>}
+                                {/* Kalau tidak ada aksi apapun */}
+                                {!b.paymentProof && !showAksi && (
+                                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>—</span>
+                                )}
                             </div>
                         </TableCell>
                     </TableRow>
@@ -70,11 +81,18 @@ export default function ManagePayments() {
     const unpaid = nonCash.filter(b => b.paymentStatus === 'unpaid')
 
     const tabs = [
-        { label: `Perlu Verifikasi (${needVerif.length})`, data: needVerif },
-        { label: `Lunas (${paid.length})`, data: paid },
-        { label: `Belum Bayar (${unpaid.length})`, data: unpaid },
-        { label: `Semua (${nonCash.length})`, data: nonCash },
+        { label: `Perlu Verifikasi (${needVerif.length})`, data: needVerif, showAksi: true },
+        { label: `Lunas (${paid.length})`, data: paid, showAksi: false },
+        { label: `Belum Bayar (${unpaid.length})`, data: unpaid, showAksi: false },
+        { label: `Semua (${nonCash.length})`, data: nonCash, showAksi: false },
     ]
+
+    // URL gambar bukti 
+    function getBuktiUrl(paymentProof) {
+        if (!paymentProof) return null
+        if (paymentProof.startsWith('http')) return paymentProof
+        return `${BE_URL}/uploads/${paymentProof}`
+    }
 
     return (
         <div className="max-w-6xl mx-auto px-6 py-10">
@@ -115,24 +133,48 @@ export default function ManagePayments() {
 
             <PayTable
                 data={tabs[activeTab].data}
+                showAksi={tabs[activeTab].showAksi}
                 onView={setViewB}
                 onConfirm={id => { if (window.confirm('Konfirmasi pembayaran ini?')) confirmPayment(id) }}
                 onReject={id => { setRejectId(id); setRejectReason('') }}
             />
 
+            {/* Modal lihat bukti */}
             <Modal show={!!viewB} onClose={() => setViewB(null)}>
-                <ModalHeader>Bukti — {viewB?.customerName}</ModalHeader>
+                <ModalHeader>Bukti Pembayaran — {viewB?.customerName}</ModalHeader>
                 <ModalBody>
-                    {viewB?.paymentProof && <img src={viewB.paymentProof} alt="bukti" className="w-full rounded" />}
-                    {viewB?.rejectReason && <div className="mt-3 p-3 rounded text-sm" style={{ backgroundColor: '#f5e8e8', color: '#9b4f4f' }}>Alasan: {viewB.rejectReason}</div>}
+                    {viewB?.paymentProof && (
+                        <img
+                            src={getBuktiUrl(viewB.paymentProof)}
+                            alt="bukti pembayaran"
+                            className="w-full rounded"
+                            style={{ maxHeight: '60vh', objectFit: 'contain' }}
+                        />
+                    )}
+                    {viewB?.rejectReason && (
+                        <div className="mt-3 p-3 rounded text-sm" style={{ backgroundColor: '#f5e8e8', color: '#9b4f4f' }}>
+                            Alasan penolakan: {viewB.rejectReason}
+                        </div>
+                    )}
                 </ModalBody>
+                <ModalFooter>
+                    <Button color="gray" onClick={() => setViewB(null)}>Tutup</Button>
+                </ModalFooter>
             </Modal>
 
+            {/* Modal tolak pembayaran */}
             <Modal show={!!rejectId} onClose={() => setRejectId(null)} size="sm">
                 <ModalHeader>Tolak Pembayaran</ModalHeader>
                 <ModalBody>
                     <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>Tulis alasan penolakan:</p>
-                    <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="Misal: Bukti tidak jelas..." rows={3} className="w-full p-2.5 text-sm border rounded" style={{ borderColor: '#e5e7eb' }} />
+                    <textarea
+                        value={rejectReason}
+                        onChange={e => setRejectReason(e.target.value)}
+                        placeholder="Misal: Bukti tidak jelas..."
+                        rows={3}
+                        className="w-full p-2.5 text-sm border rounded"
+                        style={{ borderColor: '#e5e7eb' }}
+                    />
                 </ModalBody>
                 <ModalFooter>
                     <Button color="failure" onClick={() => { rejectPayment(rejectId, rejectReason); setRejectId(null) }}>Tolak</Button>

@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await fetch(`${BASE_URL}/profile/change-password`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        headers: {'Content-Type': 'application/json', 'Authorization': token },
         body: JSON.stringify({ old_password: oldPass, new_password: newPass })
       })
       const json = await res.json()

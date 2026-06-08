@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext'
 
 const BookingContext = createContext()
 
-const BASE_URL        = 'http://localhost:3000'
+const BASE_URL = 'http://localhost:3000'
 const HOME_SERVICE_FEE = 50000
 
 export function BookingProvider({ children }) {
@@ -11,7 +11,7 @@ export function BookingProvider({ children }) {
 
   const [services, setServices] = useState([])
   const [bookings, setBookings] = useState([])
-  const [loading,  setLoading]  = useState(false)
+  const [loading, setLoading] = useState(false)
 
   // helper fetch dengan token
   const apiFetch = useCallback(async (path, options = {}) => {
@@ -68,25 +68,25 @@ export function BookingProvider({ children }) {
   const fetchAllBookings = useCallback(async (params = {}) => {
     try {
       const query = new URLSearchParams(params).toString()
-      const json  = await apiFetch(`/bookings${query ? '?' + query : ''}`)
+      const json = await apiFetch(`/bookings${query ? '?' + query : ''}`)
       if (json.status === 200) setBookings(json.data.data || json.data)
     } catch (e) { console.error(e) }
   }, [apiFetch])
 
   const addBooking = async (data) => {
     const body = {
-      serviceId:     data.serviceId,
-      serviceType:   data.serviceType,
-      address:       data.address || '',
-      date:          data.date,
-      time:          data.time,
+      serviceId: data.serviceId,
+      serviceType: data.serviceType,
+      address: data.address || '',
+      date: data.date,
+      time: data.time,
       paymentMethod: data.paymentMethod,
-      notes:         data.notes || ''
+      notes: data.notes || ''
     }
     const json = await apiFetch('/bookings', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body)
+      body: JSON.stringify(body)
     })
     if (json.status === 201) setBookings(p => [json.data, ...p])
     return json
@@ -100,9 +100,9 @@ export function BookingProvider({ children }) {
 
   const reschedule = async (id, date, time) => {
     const json = await apiFetch(`/bookings/${id}/reschedule`, {
-      method:  'PATCH',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ date, time })
+      body: JSON.stringify({ date, time })
     })
     if (json.status === 200) setBookings(p => p.map(b => b.id === id ? json.data : b))
     return json
@@ -110,9 +110,9 @@ export function BookingProvider({ children }) {
 
   const updateStatus = async (id, status) => {
     const json = await apiFetch(`/bookings/${id}/status`, {
-      method:  'PATCH',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ status })
+      body: JSON.stringify({ status })
     })
     if (json.status === 200) setBookings(p => p.map(b => b.id === id ? json.data : b))
     return json
@@ -141,9 +141,9 @@ export function BookingProvider({ children }) {
 
   const rejectPayment = async (id, reason) => {
     const json = await apiFetch(`/payments/${id}/reject`, {
-      method:  'PATCH',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ reason })
+      body: JSON.stringify({ reason })
     })
     if (json.status === 200) setBookings(p => p.map(b => b.id === id ? { ...b, paymentStatus: 'unpaid', paymentProof: null, rejectReason: reason } : b))
     return json
@@ -152,9 +152,9 @@ export function BookingProvider({ children }) {
   // riview
   const addReview = async (id, rating, comment) => {
     const json = await apiFetch(`/bookings/${id}/review`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ rating, comment })
+      body: JSON.stringify({ rating, comment })
     })
     if (json.status === 201) setBookings(p => p.map(b => b.id === id ? { ...b, review: { rating, comment } } : b))
     return json
@@ -162,9 +162,9 @@ export function BookingProvider({ children }) {
 
   const editReview = async (id, rating, comment) => {
     const json = await apiFetch(`/bookings/${id}/review`, {
-      method:  'PUT',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ rating, comment })
+      body: JSON.stringify({ rating, comment })
     })
     if (json.status === 200) setBookings(p => p.map(b => b.id === id ? { ...b, review: { rating, comment } } : b))
     return json
@@ -180,8 +180,8 @@ export function BookingProvider({ children }) {
 
   const bookingsByCustomer = (id) => bookings.filter(b => b.customerId === id)
 
-  const totalRevenue     = bookings.filter(b => b.status === 'completed' && b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalPrice || b.servicePrice), 0)
-  const pendingPayments  = bookings.filter(b => b.paymentStatus === 'pending_verification').length
+  const totalRevenue = bookings.filter(b => b.status === 'completed' && b.paymentStatus === 'paid').reduce((s, b) => s + (b.totalPrice || b.servicePrice), 0)
+  const pendingPayments = bookings.filter(b => b.paymentStatus === 'pending_verification').length
   const homeServiceCount = bookings.filter(b => b.serviceType === 'homeservice').length
 
   return (

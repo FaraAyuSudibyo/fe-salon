@@ -8,7 +8,6 @@ export default function CardComp({ service, isAdmin, isLoggedIn }) {
 
     return (
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col">
-            {/* Gambar dengan tinggi fixed */}
             <div style={{ height: '192px', overflow: 'hidden', borderRadius: '8px 8px 0 0' }}>
                 <img
                     src={service.image}

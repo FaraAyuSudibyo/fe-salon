@@ -210,7 +210,10 @@ export default function MyBookings() {
             {/* Modal lihat bukti */}
             <Modal show={!!viewProofUrl} onClose={() => setViewProofUrl(null)}>
                 <ModalHeader>Bukti Pembayaran</ModalHeader>
-                <ModalBody>{viewProofUrl && <img src={viewProofUrl} alt="bukti" className="w-full rounded" />}</ModalBody>
+                <ModalBody>{viewProofUrl && <img src={viewProofUrl} alt="bukti" className="w-full rounded" style={{ maxHeight: '60vh', objectFit: 'contain' }} />}</ModalBody>
+                <ModalFooter>
+                    <Button color="gray" onClick={() => setViewProofUrl(null)}>Tutup</Button>
+                </ModalFooter>
             </Modal>
 
             {/* Modal ulasan */}
